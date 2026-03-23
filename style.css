@@ -124,6 +124,17 @@ section h2 {
     border-left: 4px solid #667eea;
 }
 
+.note-card .author-label {
+    font-weight: 600;
+    color: #667eea;
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+}
+
+.note-card.from-her {
+    border-left-color: #e91e63;
+}
+
 .note-card:hover {
     transform: translateX(5px);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
@@ -349,17 +360,83 @@ section h2 {
 }
 
 @media (max-width: 600px) {
+    body {
+        padding: 10px;
+    }
+
     header {
         flex-direction: column;
         gap: 15px;
         text-align: center;
+        padding: 15px;
+    }
+
+    header h1 {
+        font-size: 1.4rem;
     }
 
     .user-buttons {
         flex-direction: column;
     }
 
+    .user-btn {
+        padding: 15px 20px;
+        flex-direction: row;
+        justify-content: flex-start;
+        gap: 15px;
+    }
+
+    .modal-content {
+        width: 95%;
+        padding: 20px;
+    }
+
+    section {
+        padding: 15px;
+    }
+
+    section h2 {
+        font-size: 1.2rem;
+    }
+
+    #note-content {
+        min-height: 80px;
+        font-size: 16px; /* Prevents zoom on iOS */
+    }
+
+    .btn-primary, .btn-secondary {
+        width: 100%;
+        padding: 12px 20px;
+        font-size: 1rem;
+    }
+
     .modal-actions {
         flex-direction: column;
+    }
+
+    .add-comment {
+        flex-direction: column;
+    }
+
+    .add-comment input {
+        width: 100%;
+        margin-bottom: 10px;
+    }
+
+    .note-card {
+        padding: 12px;
+    }
+
+    .note-card .author-label {
+        font-size: 0.85rem;
+    }
+
+    .note-detail {
+        padding: 15px;
+    }
+
+    #pin-input {
+        width: 120px;
+        font-size: 1rem;
     }
 }

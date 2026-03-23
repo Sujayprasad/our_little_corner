@@ -9,6 +9,31 @@ const USERS = {
     'her': { name: 'Her', pin: '2222', icon: '💕' }
 };
 
+// Simple encryption/decryption (XOR cipher with base64)
+const APP_KEY = 'our_little_corner_secret_key_2024';
+
+function encrypt(text) {
+    let result = '';
+    for (let i = 0; i < text.length; i++) {
+        result += String.fromCharCode(text.charCodeAt(i) ^ APP_KEY.charCodeAt(i % APP_KEY.length));
+    }
+    return btoa(unescape(encodeURIComponent(result)));
+}
+
+function decrypt(encoded) {
+    try {
+        const decoded = decodeURIComponent(escape(atob(encoded)));
+        let result = '';
+        for (let i = 0; i < decoded.length; i++) {
+            result += String.fromCharCode(decoded.charCodeAt(i) ^ APP_KEY.charCodeAt(i % APP_KEY.length));
+        }
+        return result;
+    } catch (e) {
+        console.error('Decryption failed:', e);
+        return null;
+    }
+}
+
 // Initialize app
 function init() {
     loadNotes();
@@ -19,12 +44,18 @@ function init() {
 // Load notes from localStorage
 function loadNotes() {
     const stored = localStorage.getItem('our-notes');
-    notes = stored ? JSON.parse(stored) : [];
+    if (stored) {
+        const decrypted = decrypt(stored);
+        notes = decrypted ? JSON.parse(decrypted) : [];
+    } else {
+        notes = [];
+    }
 }
 
-// Save notes to localStorage
+// Save notes to localStorage (encrypted)
 function saveNotes() {
-    localStorage.setItem('our-notes', JSON.stringify(notes));
+    const encrypted = encrypt(JSON.stringify(notes));
+    localStorage.setItem('our-notes', encrypted);
 }
 
 // Show user selection modal
@@ -113,23 +144,29 @@ function addNote() {
 function renderNotes() {
     const container = document.getElementById('notes-container');
     const userNotes = notes.filter(n => n.userId === currentUser.key);
+    const otherNotes = notes.filter(n => n.userId !== currentUser.key);
 
-    if (userNotes.length === 0) {
+    if (notes.length === 0) {
         container.innerHTML = '<p style="color: #999; text-align: center;">No notes yet. Create your first note!</p>';
         return;
     }
 
-    container.innerHTML = userNotes.map(note => `
-        <div class="note-card ${note.acknowledged ? 'acknowledged' : ''}" data-id="${note.id}">
-            <div class="preview">${note.content.substring(0, 100)}${note.content.length > 100 ? '...' : ''}</div>
-            <div class="meta">
-                <span>${new Date(note.createdAt).toLocaleDateString()}</span>
-                <span class="status-badge ${note.acknowledged ? 'read' : 'unread'}">
-                    ${note.acknowledged ? '✓ Read' : '○ Unread'}
-                </span>
-            </div>
-        </div>
-    `).join('');
+    // Render notes from current user
+    const myNotesHTML = currentUser.key === 'you'
+        ? userNotes.map(note => renderNoteCard(note, 'Your Note')).join('')
+        : userNotes.map(note => renderNoteCard(note, '👤 You')).join('');
+
+    // Render notes from other user (her)
+    const herNotesHTML = currentUser.key === 'you'
+        ? otherNotes.map(note => renderNoteCard(note, '💕 Her')).join('')
+        : otherNotes.map(note => renderNoteCard(note, '👤 Her')).join('');
+
+    container.innerHTML = `
+        ${userNotes.length > 0 ? '<h3 style="margin: 15px 0 10px; color: #667eea;">My Notes</h3>' : ''}
+        ${myNotesHTML}
+        ${otherNotes.length > 0 ? '<h3 style="margin: 15px 0 10px; color: #e91e63;">Notes from Her</h3>' : ''}
+        ${herNotesHTML}
+    `;
 
     // Add click handlers
     container.querySelectorAll('.note-card').forEach(card => {
@@ -190,6 +227,24 @@ function addComment() {
 
     // Re-render the notes list to update preview
     renderNotes();
+}
+
+// Render a single note card
+function renderNoteCard(note, authorLabel) {
+    const isFromHer = (currentUser.key === 'you' && note.userId === 'her') ||
+                      (currentUser.key === 'her' && note.userId === 'you');
+    return `
+        <div class="note-card ${note.acknowledged ? 'acknowledged' : ''} ${isFromHer ? 'from-her' : ''}" data-id="${note.id}">
+            <div class="author-label">${authorLabel}</div>
+            <div class="preview">${note.content.substring(0, 100)}${note.content.length > 100 ? '...' : ''}</div>
+            <div class="meta">
+                <span>${new Date(note.createdAt).toLocaleDateString()}</span>
+                <span class="status-badge ${note.acknowledged ? 'read' : 'unread'}">
+                    ${note.acknowledged ? '✓ Read' : '○ Unread'}
+                </span>
+            </div>
+        </div>
+    `;
 }
 
 // Acknowledge note
