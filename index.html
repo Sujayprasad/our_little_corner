@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Our Notes</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Our Notes</h1>
+            <div id="user-info">
+                <span id="current-user"></span>
+                <button id="switch-user" class="btn-secondary">Switch User</button>
+            </div>
+        </header>
+
+        <!-- User Selection Modal -->
+        <div id="user-modal" class="modal">
+            <div class="modal-content">
+                <h2>Who are you?</h2>
+                <div class="user-buttons">
+                    <button class="user-btn" data-user="you">
+                        <span class="user-icon">👤</span>
+                        <span>You</span>
+                    </button>
+                    <button class="user-btn" data-user="her">
+                        <span class="user-icon">💕</span>
+                        <span>Her</span>
+                    </button>
+                </div>
+                <div id="pin-entry" class="hidden">
+                    <input type="password" id="pin-input" placeholder="Enter PIN" maxlength="4">
+                    <button id="verify-pin" class="btn-primary">Enter</button>
+                    <p id="pin-error" class="error"></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <main>
+            <!-- Create Note Section -->
+            <section id="create-note">
+                <h2>Create New Note</h2>
+                <textarea id="note-content" placeholder="Write your note here..."></textarea>
+                <button id="add-note" class="btn-primary">Add Note</button>
+            </section>
+
+            <!-- Notes List -->
+            <section id="notes-list">
+                <h2>Your Notes</h2>
+                <div id="notes-container"></div>
+            </section>
+        </main>
+
+        <!-- Note Detail Modal -->
+        <div id="note-modal" class="modal hidden">
+            <div class="modal-content">
+                <h2>Note</h2>
+                <div class="note-detail">
+                    <p id="note-text"></p>
+                    <p id="note-date" class="date"></p>
+                    <p id="note-status" class="status"></p>
+                </div>
+                <div class="comments-section">
+                    <h3>Comments</h3>
+                    <div id="comments-list"></div>
+                    <div class="add-comment">
+                        <input type="text" id="comment-input" placeholder="Add a comment...">
+                        <button id="add-comment" class="btn-secondary">Add</button>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button id="acknowledge-btn" class="btn-primary">Mark as Read</button>
+                    <button id="close-note" class="btn-secondary">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
