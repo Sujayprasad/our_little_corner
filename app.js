@@ -2,12 +2,18 @@
 let currentUser = null;
 let notes = [];
 let selectedNote = null;
+let refreshInterval = null;
+let useApi = false;
 
 // User configuration
 const USERS = {
     'you': { name: 'You', pin: '1111', icon: '👤' },
     'her': { name: 'Her', pin: '2222', icon: '💕' }
 };
+
+// API URL - Replace with your ngrok URL when running server
+// Example: 'https://abc123.ngrok.io'
+const API_URL = ' https://fossilizable-cherelle-unswaddling.ngrok-free.dev'; // Leave empty to use localStorage only
 
 // Simple encryption/decryption (XOR cipher with base64)
 const APP_KEY = 'our_little_corner_secret_key_2024';
@@ -34,15 +40,58 @@ function decrypt(encoded) {
     }
 }
 
+// Check if API is available
+async function checkApi() {
+    if (!API_URL) return false;
+    try {
+        const response = await fetch(`${API_URL}/notes`, { method: 'GET' });
+        return response.ok;
+    } catch {
+        return false;
+    }
+}
+
 // Initialize app
-function init() {
+async function init() {
+    useApi = await checkApi();
     loadNotes();
     setupEventListeners();
     showUserModal();
+
+    // Poll for updates every 3 seconds if using API
+    if (useApi) {
+        refreshInterval = setInterval(async () => {
+            try {
+                const response = await fetch(`${API_URL}/notes`);
+                const newNotes = await response.json();
+                if (JSON.stringify(newNotes) !== JSON.stringify(notes)) {
+                    notes = newNotes;
+                    if (currentUser) renderNotes();
+                }
+            } catch (e) {
+                console.error('Poll error:', e);
+            }
+        }, 3000);
+    }
 }
 
-// Load notes from localStorage
+// Load notes from API or localStorage
 function loadNotes() {
+    if (useApi) {
+        fetch(`${API_URL}/notes`)
+            .then(res => res.json())
+            .then(data => {
+                notes = data;
+                saveToLocalStorage();
+            })
+            .catch(() => loadFromLocalStorage());
+    } else {
+        loadFromLocalStorage();
+    }
+}
+
+// Load from localStorage fallback
+function loadFromLocalStorage() {
     const stored = localStorage.getItem('our-notes');
     if (stored) {
         const decrypted = decrypt(stored);
@@ -52,10 +101,38 @@ function loadNotes() {
     }
 }
 
-// Save notes to localStorage (encrypted)
-function saveNotes() {
+// Save to localStorage
+function saveToLocalStorage() {
     const encrypted = encrypt(JSON.stringify(notes));
     localStorage.setItem('our-notes', encrypted);
+}
+
+// Save note to API
+async function saveNoteToApi(note) {
+    if (!API_URL) return;
+    try {
+        await fetch(`${API_URL}/notes/${note.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(note)
+        });
+    } catch (error) {
+        console.error('API save error:', error);
+    }
+}
+
+// Add note to API
+async function addNoteToApi(note) {
+    if (!API_URL) return;
+    try {
+        await fetch(`${API_URL}/notes`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(note)
+        });
+    } catch (error) {
+        console.error('API add error:', error);
+    }
 }
 
 // Show user selection modal
@@ -120,7 +197,7 @@ function verifyPin(userKey) {
 }
 
 // Add new note
-function addNote() {
+async function addNote() {
     const content = document.getElementById('note-content').value.trim();
     if (!content) return;
 
@@ -133,8 +210,13 @@ function addNote() {
         createdAt: new Date().toISOString()
     };
 
-    notes.unshift(note);
-    saveNotes();
+    if (useApi) {
+        await addNoteToApi(note);
+        notes.unshift(note);
+    } else {
+        notes.unshift(note);
+        saveToLocalStorage();
+    }
 
     document.getElementById('note-content').value = '';
     renderNotes();
@@ -212,7 +294,7 @@ function renderComments() {
 }
 
 // Add comment to note
-function addComment() {
+async function addComment() {
     const text = document.getElementById('comment-input').value.trim();
     if (!text || !selectedNote) return;
 
@@ -221,11 +303,33 @@ function addComment() {
         createdAt: new Date().toISOString()
     });
 
-    saveNotes();
+    if (useApi) {
+        await saveNoteToApi(selectedNote);
+    } else {
+        saveToLocalStorage();
+    }
     document.getElementById('comment-input').value = '';
     renderComments();
+    renderNotes();
+}
 
-    // Re-render the notes list to update preview
+// Acknowledge note
+async function acknowledgeNote() {
+    if (!selectedNote) return;
+
+    selectedNote.acknowledged = true;
+
+    if (useApi) {
+        await saveNoteToApi(selectedNote);
+    } else {
+        saveToLocalStorage();
+    }
+
+    document.getElementById('note-status').textContent = 'Status: Read ✓';
+    document.getElementById('note-status').className = 'status read';
+    document.getElementById('acknowledge-btn').textContent = 'Already Read ✓';
+    document.getElementById('acknowledge-btn').disabled = true;
+
     renderNotes();
 }
 
@@ -245,21 +349,6 @@ function renderNoteCard(note, authorLabel) {
             </div>
         </div>
     `;
-}
-
-// Acknowledge note
-function acknowledgeNote() {
-    if (!selectedNote) return;
-
-    selectedNote.acknowledged = true;
-    saveNotes();
-
-    document.getElementById('note-status').textContent = 'Status: Read ✓';
-    document.getElementById('note-status').className = 'status read';
-    document.getElementById('acknowledge-btn').textContent = 'Already Read ✓';
-    document.getElementById('acknowledge-btn').disabled = true;
-
-    renderNotes();
 }
 
 // Start the app
